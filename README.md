@@ -19,7 +19,7 @@ Este projeto é uma API REST para atender a aplicação de notícias rápidas. E
 
 #### Exemplo de uso
 
-```http GET http://localhost:5000/news?page=2&order=asc&title=Driven````
+GET `http://localhost:5000/news?page=2&order=asc&title=Driven`
 
 - POST `/news`
 - PUT `/news/:id`
