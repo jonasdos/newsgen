@@ -1,67 +1,76 @@
-import prisma from "../database";
+import { newsData } from "protocols";
 import * as newsRepository from "../repositories/news-repository";
-import { AlterNewsData, CreateNewsData } from "../repositories/news-repository";
 
-export async function getNews() {
-  return newsRepository.getNoticias();
+export async function getAllNews() {
+  return newsRepository.findAllNews();
 }
 
-export async function getSpecificNews(id: number) {
-  const news = await newsRepository.getNoticiaById(id);
+export async function getNewsById(newsId: number) {
+  const news = await newsRepository.findNewsById(newsId);
   if (!news) {
     throw {
       name: "NotFound",
-      message: `News with id ${id} not found.`,
+      message: `News with id ${newsId} not found.`,
     };
   }
 
   return news;
 }
 
-export async function createNews(newsData: CreateNewsData) {
-  await validate(newsData);
-  return newsRepository.createNoticia(newsData);
+export async function createNews(newsData: newsData) {
+  await validateNewsCreation(newsData);
+  return newsRepository.createNews(newsData);
 }
 
-export async function alterNews(id: number, newsData: AlterNewsData) {
-  const news = await getSpecificNews(id);
-  await validate(newsData, news.title !== newsData.title);
+export async function updateNews(newsId: number, updatedNewsData: newsData) {
+  const existingNews = await getNewsById(newsId);
+  await validateNewsUpdate(updatedNewsData, existingNews.title);
 
-  return newsRepository.updateNoticia(id, newsData);
+  return newsRepository.updateNews(newsId, updatedNewsData);
 }
 
-export async function deleteNews(id: number) {
-  await getSpecificNews(id);
-  return newsRepository.removeNoticia(id);
+export async function removeNews(newsId: number) {
+  await getNewsById(newsId);
+  return newsRepository.deleteNews(newsId);
 }
 
-async function validate(newsData: CreateNewsData, isNew = true) {
-  // validate if news with specific text already exists
-  if (isNew) {
-    const newsWithTitle = await prisma.news.findFirst({
-      where: { title: newsData.title },
-    });
+async function validateNewsCreation(newsData: newsData) {
+  await ensureTitleIsUnique(newsData.title);
+  validateTextLength(newsData.text);
+  validatePublicationDate(newsData.publicationDate);
+}
 
-    if (newsWithTitle) {
-      throw {
-        name: "Conflict",
-        message: `News with title ${newsData.title} already exist`,
-      };
-    }
+async function validateNewsUpdate(newsData: newsData, existingTitle: string) {
+  if (newsData.title !== existingTitle) {
+    await ensureTitleIsUnique(newsData.title);
   }
+  validateTextLength(newsData.text);
+  validatePublicationDate(newsData.publicationDate);
+}
 
-  // checks news text length
-  if (newsData.text.length < 500) {
+async function ensureTitleIsUnique(title: string) {
+  const existingNews = await newsRepository.findNewsByTitle(title);
+  if (existingNews) {
+    throw {
+      name: "Conflict",
+      message: `News with title "${title}" already exists.`,
+    };
+  }
+}
+
+function validateTextLength(text: string) {
+  if (text.length < 500) {
     throw {
       name: "BadRequest",
       message: "The news text must be at least 500 characters long.",
     };
   }
+}
 
-  // checks date
+function validatePublicationDate(publicationDate: Date) {
   const currentDate = new Date();
-  const publicationDate = new Date(newsData.publicationDate);
-  if (publicationDate.getTime() < currentDate.getTime()) {
+  const parsedPublicationDate = new Date(publicationDate);
+  if (parsedPublicationDate.getTime() < currentDate.getTime()) {
     throw {
       name: "BadRequest",
       message: "The publication date cannot be in the past.",
