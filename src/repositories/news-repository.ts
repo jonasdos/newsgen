@@ -15,8 +15,27 @@ export function findNewsById(id: number) {
   });
 }
 export function findNewsByTitle(title: string) {
-  return prisma.news.findUnique({
+  const noticia = prisma.news.findUnique({
     where: { title },
+  });
+  console.log(noticia);
+  return noticia;
+}
+export function findNewsWithFilters(
+  page: number,
+  order: "asc" | "desc",
+  title?: string
+) {
+  const pageSize = 10;
+  const skip = (page - 1) * pageSize;
+
+  return prisma.news.findMany({
+    where: title
+      ? { title: { contains: title, mode: "insensitive" } }
+      : undefined,
+    orderBy: { publicationDate: order },
+    skip,
+    take: pageSize,
   });
 }
 

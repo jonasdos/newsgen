@@ -4,8 +4,19 @@ import * as service from "./../services/news-service";
 import { newsData } from "protocols";
 
 export async function getNews(req: Request, res: Response) {
-  const news = await service.getAllNews();
-  return res.status(httpStatus.OK).send(news);
+  const page = parseInt(req.query.page as string) || 1; // Página padrão é 1
+  const order =
+    req.query.order === "desc" || req.query.order === "asc"
+      ? req.query.order
+      : "desc";
+  const title = (req.query.title as string) || undefined;
+
+  try {
+    const news = await service.getFilteredNews(page, order, title);
+    return res.status(httpStatus.OK).send(news);
+  } catch (error) {
+    return res.status(httpStatus.BAD_REQUEST).send(error.message);
+  }
 }
 
 export async function getNewsById(req: Request, res: Response) {

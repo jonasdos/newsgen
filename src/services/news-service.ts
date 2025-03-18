@@ -16,6 +16,16 @@ export async function getNewsById(newsId: number) {
 
   return news;
 }
+export async function getFilteredNews(
+  page: number,
+  order: "asc" | "desc",
+  title?: string
+) {
+  if (page < 0) {
+    throw new Error("Page must be greater than 0.");
+  }
+  return newsRepository.findNewsWithFilters(page, order, title);
+}
 
 export async function createNews(newsData: newsData) {
   await validateNewsCreation(newsData);
